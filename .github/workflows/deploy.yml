@@ -16,12 +16,16 @@ jobs:
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+          ssh-private-key: |
+            ${{ secrets.EC2_SSH_KEY }}
+            ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add GitHub to known hosts
+        run: ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 
       - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            # If folder doesn't exist, clone using SSH
             if [ ! -d "~/techx" ]; then
               git clone git@github.com:${{ github.repository }}.git techx
             fi
@@ -29,7 +33,6 @@ jobs:
             cd ~/techx
             git pull origin master
 
-            # Build and deploy container
             sudo docker stop techx || true
             sudo docker rm techx || true
             sudo docker build -t techx .
