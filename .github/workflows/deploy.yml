@@ -1,0 +1,31 @@
+name: Deploy to EC2 using Docker
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Copy files to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            cd ~/techx || git clone https://github.com/YOUR_GITHUB_USERNAME/techx.git
+            cd techx
+            git pull origin master
+            docker stop techx || true
+            docker rm techx || true
+            docker build -t techx .
+            docker run -d -p 80:80 --name techx techx
+          EOF
